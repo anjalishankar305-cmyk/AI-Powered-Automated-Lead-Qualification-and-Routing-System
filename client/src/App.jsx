@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom';
-import { Activity, ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Bell, Building2, CalendarDays, Check, ChevronDown, CircleHelp, Clock3, Command, Filter, LayoutDashboard, Menu, MessageSquareText, Plus, Search, Send, Settings2, ShieldCheck, Sparkles, Target, Users, X } from 'lucide-react';
-import { getEnterprise, getLead, getLeads, getStats, submitLead } from './api.js';
+import { Activity, ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Bell, Building2, Check, ChevronDown, CircleHelp, Clock3, Command, Filter, LayoutDashboard, LockKeyhole, Menu, MessageSquareText, Plus, Search, Send, Settings2, ShieldCheck, Sparkles, Target, Users, X } from 'lucide-react';
+import { getEnterprise, getLead, getLeads, getStats, login, submitLead } from './api.js';
 
 const initials = value => (value || 'LD').split(/[\s@.]+/).slice(0, 2).map(v => v[0]?.toUpperCase()).join('');
 const shortDate = date => date ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(date)) : '—';
 const todayLabel = new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date()).toUpperCase();
 const money = (amount, currency = 'USD') => amount == null ? 'Budget unknown' : new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount);
 
-function Shell({ children }) {
+function Shell({ children, onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
   return <div className="app-shell"><aside className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}>
     <Link to="/" className="brand"><span className="brand-mark"><Command size={19} /></span><span>leadflow<span className="brand-dot">.</span></span></Link>
@@ -20,10 +20,23 @@ function Shell({ children }) {
       <NavLink to="/submit" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}><Plus size={18}/><span>New inquiry</span></NavLink>
     </nav>
     <div className="nav-label tools-label">WORKSPACE</div><div className="nav-list"><button className="nav-item"><Activity size={18}/><span>Activity</span></button><button className="nav-item"><Settings2 size={18}/><span>Settings</span></button></div>
-    <div className="sidebar-bottom"><div className="upgrade-card"><div className="upgrade-icon"><Sparkles size={16}/></div><strong>Make every lead count</strong><p>Your pipeline is looking healthy. Keep the momentum going.</p><Link to="/submit">Add a new lead <ArrowRight size={14}/></Link><div className="upgrade-orb"/></div><button className="profile"><span className="avatar avatar-profile">AM</span><span className="profile-name">Alex Morgan<small>Admin</small></span><MoreIcon/></button></div>
+    <div className="sidebar-bottom"><div className="upgrade-card"><div className="upgrade-icon"><Sparkles size={16}/></div><strong>Make every lead count</strong><p>Your pipeline is looking healthy. Keep the momentum going.</p><Link to="/submit">Add a new lead <ArrowRight size={14}/></Link><div className="upgrade-orb"/></div><button className="profile" onClick={onLogout}><span className="avatar avatar-profile">AM</span><span className="profile-name">Sales admin<small>Sign out</small></span><MoreIcon/></button></div>
   </aside><main className="main-area"><header className="topbar"><button className="mobile-menu icon-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle navigation"><Menu size={20}/></button><div className="breadcrumbs"><span>Workspace</span><span className="crumb-slash">/</span><strong>Pipeline</strong></div><div className="top-actions"><button className="search-shortcut" onClick={() => location.href='/leads'}><Search size={16}/><span>Search anything...</span><kbd>⌘ K</kbd></button><button className="icon-button notification-button" aria-label="Notifications"><Bell size={18}/><i/></button><span className="top-divider"/><button className="help-button"><CircleHelp size={17}/> <span>Help center</span></button></div></header>{children}</main></div>
 }
 function MoreIcon(){return <span className="more-dots">···</span>}
+function LoginPage({ onLogin }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const submit = async event => {
+    event.preventDefault(); setBusy(true); setError('');
+    try { const result = await login({ email, password }); onLogin(result.token); }
+    catch (err) { setError(err.response?.data?.error || 'Unable to sign in. Check the API connection and try again.'); }
+    finally { setBusy(false); }
+  };
+  return <div className="login-screen"><form className="login-card" onSubmit={submit}><Link to="/" className="brand"><span className="brand-mark"><Command size={19}/></span><span>leadflow<span className="brand-dot">.</span></span></Link><div className="login-lock"><LockKeyhole size={20}/></div><div className="eyebrow">PRIVATE SALES WORKSPACE</div><h1>Welcome back</h1><p>Sign in to view and manage your leads.</p><label>Email address<input type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@company.com"/></label><label>Password<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)} placeholder="Enter your password"/></label>{error&&<div className="form-error">{error}</div>}<button className="button button-primary" disabled={busy}>{busy?<><span className="spinner"/> Signing in…</>:<>Sign in <ArrowRight size={15}/></>}</button><small>Use the ADMIN_EMAIL and ADMIN_PASSWORD configured for your API.</small></form></div>;
+}
 function PageHeading({ eyebrow, title, description, action }) { return <div className="page-heading"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p>{description}</p></div>{action}</div>; }
 function Badge({ children, kind='' }) { return <span className={`badge ${kind.toLowerCase().replaceAll('_','-')}`}>{kind==='ENTERPRISE'&&<i/>}{children}</span>; }
 function StatCard({ label, value, change, icon: Icon, tone, note }) { return <div className="stat-card"><div className="stat-top"><span className="stat-label">{label}</span><span className={`stat-icon ${tone}`}><Icon size={17}/></span></div><div className="stat-value">{value}</div><div className="stat-foot"><span className="change"><ArrowUpRight size={14}/>{change}</span><span>{note}</span></div><div className={`sparkline ${tone}`}><svg viewBox="0 0 110 28" preserveAspectRatio="none"><path d="M0 23 C13 20 14 18 23 20 S37 7 48 13 62 6 72 10 87 1 96 5 103 6 110 0"/></svg></div></div>; }
@@ -51,4 +64,15 @@ function SubmitPage(){ const navigate=useNavigate();const [form,setForm]=useStat
 function DetailPage(){const {id}=useParams();const [lead,setLead]=useState(null);const [error,setError]=useState('');useEffect(()=>{getLead(id).then(d=>setLead(d.lead)).catch(()=>setError('This lead could not be found.'))},[id]);if(error)return <div className="page-content"><Link className="back-link" to="/leads"><ArrowLeft size={15}/> Back to leads</Link><div className="empty-state"><strong>{error}</strong></div></div>;if(!lead)return <div className="page-content"><LoadingRows/></div>;
   return <div className="page-content"><Link className="back-link" to="/leads"><ArrowLeft size={15}/> Back to all leads</Link><PageHeading eyebrow="LEAD DETAILS" title={lead.companyName||lead.contactName} description={`Added ${shortDate(lead.createdAt)} · ${lead.contactName} · ${lead.email}`} action={<Badge kind={lead.tier}>{lead.tier?.replaceAll('_',' ')}</Badge>}/><div className="detail-grid"><section className="panel detail-main"><div className="detail-section"><h3>AI summary</h3><p>{lead.summary}</p></div><div className="detail-section"><h3>Original inquiry</h3><blockquote>{lead.rawText}</blockquote></div><div className="detail-section"><h3>Contact information</h3><div className="detail-pair"><span>Contact</span><strong>{lead.contactName}</strong><span>Email</span><strong>{lead.email}</strong><span>Company</span><strong>{lead.companyName}</strong></div></div></section><aside className="panel detail-aside"><h3>Qualification</h3><div className="detail-metric"><span>Estimated budget</span><strong>{money(lead.estimatedBudget,lead.currency)}</strong></div><div className="detail-metric"><span>Urgency</span><span className={`urgency urgency-${lead.urgency?.toLowerCase()}`}><i/>{lead.urgency}</span></div><div className="detail-metric"><span>Routing status</span><strong className="route-status">{lead.routingStatus?.replaceAll('_',' ')}</strong></div><div className="detail-metric"><span>Created</span><strong>{shortDate(lead.createdAt)}</strong></div><div className="routing-note"><ShieldCheck size={16}/> Qualification and routing are calculated by your team’s business rules.</div></aside></div></div>
 }
-export default function App(){return <Shell><Routes><Route path="/" element={<Dashboard/>}/><Route path="/dashboard" element={<Dashboard/>}/><Route path="/leads" element={<LeadsPage/>}/><Route path="/enterprise" element={<LeadsPage enterprise/>}/><Route path="/submit" element={<SubmitPage/>}/><Route path="/leads/:id" element={<DetailPage/>}/><Route path="*" element={<Dashboard/>}/></Routes></Shell>}
+export default function App(){
+  const [token, setToken] = useState(() => sessionStorage.getItem('leadflow_token'));
+  useEffect(() => {
+    const expire = () => setToken(null);
+    window.addEventListener('leadflow:unauthorized', expire);
+    return () => window.removeEventListener('leadflow:unauthorized', expire);
+  }, []);
+  const handleLogin = accessToken => { sessionStorage.setItem('leadflow_token', accessToken); setToken(accessToken); };
+  const handleLogout = () => { sessionStorage.removeItem('leadflow_token'); setToken(null); };
+  if (!token) return <LoginPage onLogin={handleLogin}/>;
+  return <Shell onLogout={handleLogout}><Routes><Route path="/" element={<Dashboard/>}/><Route path="/dashboard" element={<Dashboard/>}/><Route path="/leads" element={<LeadsPage/>}/><Route path="/enterprise" element={<LeadsPage enterprise/>}/><Route path="/submit" element={<SubmitPage/>}/><Route path="/leads/:id" element={<DetailPage/>}/><Route path="*" element={<Dashboard/>}/></Routes></Shell>;
+}

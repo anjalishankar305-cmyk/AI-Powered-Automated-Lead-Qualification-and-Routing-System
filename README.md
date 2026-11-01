@@ -10,10 +10,10 @@ Leadflow turns inquiry messages into structured lead records, applies configurab
 
 ## Run locally
 
-1. Install the root tooling with `npm install`.
-2. Install app dependencies with `npm install --prefix server` and `npm install --prefix client`.
-3. Copy `server/.env.example` to `server/.env` and set `MONGODB_URI`, `GEMINI_API_KEY`, and any desired qualification settings.
-4. Run `npm run dev` from the project root. The UI runs at `http://localhost:5173` and the API at `http://localhost:5000`.
+1. From the project root, install packages with `npm.cmd install`, `npm.cmd install --prefix server`, and `npm.cmd install --prefix client`. (`npm.cmd` avoids PowerShell's script execution policy blocking `npm.ps1`.)
+2. Copy `server/.env.example` to `server/.env` and set `MONGODB_URI`, `GEMINI_API_KEY`, and any desired qualification settings.
+3. Run `npm.cmd run dev` from the project root. The UI runs at `http://localhost:5173` and the API at `http://localhost:5000`.
+4. Sign in locally with `admin@leadflow.local` / `leadflow-local-only`, or replace these development-only credentials in `server/.env`.
 
 Without MongoDB, the API uses in-memory storage for local demos; records reset when the server restarts. Without Gemini, the local extractor identifies common budget, timeline, and company patterns. Configure both services for production.
 
@@ -23,6 +23,8 @@ See `server/.env.example`. The qualification threshold defaults to 10,000 USD. N
 
 ## API
 
+- `POST /api/auth/login` — exchange admin credentials for an 8-hour access token. All lead endpoints below require the resulting bearer token.
+
 - `GET /api/health` — service and database status
 - `POST /api/leads` — validate, extract, qualify, route, and save a lead
 - `GET /api/leads` — list leads with optional `search`, `tier`, `urgency`, `status`, `page`, and `limit`
@@ -30,8 +32,8 @@ See `server/.env.example`. The qualification threshold defaults to 10,000 USD. N
 - `GET /api/leads/stats` — dashboard counts
 - `GET /api/leads/:id` — lead detail
 
-Dashboard and lead-management API routes are open in this MVP. Add authentication and authorization before production use, as required by the spec.
+Dashboard and lead-management APIs require the admin login. Configure `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `JWT_SECRET`; production refuses to start without MongoDB and valid authentication settings.
 
 ## Deploy
 
-Deploy `client` as a Vite static site and `server` as a Node service, provision MongoDB Atlas, and configure the environment values above. Restrict `CLIENT_URL` to approved origins and use HTTPS. Keep API keys only in backend environment variables.
+For the complete Vercel + Render + MongoDB Atlas walkthrough, follow [DEPLOYMENT.md](./DEPLOYMENT.md). The repository includes `render.yaml` for the API and `client/vercel.json` for SPA deep links. Keep backend secrets in Render environment variables; never use `VITE_` prefixes for secrets.
